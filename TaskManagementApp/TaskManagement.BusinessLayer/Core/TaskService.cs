@@ -267,6 +267,50 @@ public class TaskService : ITaskService
         return await BuildTaskResponseAsync(task);
     }
 
+    public async Task DeleteTaskAsync(Guid projectId, Guid taskId, Guid userId)
+    {
+        var membership = (await _db.GetRepo<ProjectMember>()
+            .FindAsync(m => m.ProjectId == projectId && m.UserId == userId))
+            .FirstOrDefault() ?? throw new ForbiddenException("You are not a member of this project.");
+
+        if (membership.Role == ProjectRole.Developer)
+            throw new ForbiddenException("Only Admins and Managers can delete tasks.");
+
+        var task = await _db.GetRepo<AppTask>().GetByIdAsync(taskId) ?? throw new NotFoundException("Task not found.");
+        if (task.ProjectId != projectId) throw new NotFoundException("Task not found in this project.");
+
+        if (task.Status == TaskStatus.Approved)
+            throw new ValidationException("Approved tasks cannot be deleted.");
+
+        _db.GetRepo<AppTask>().Delete(task);
+        await _db.SaveAsync();
+    }
+
+    public async Task<TaskResponse> UpdateTaskAsync(Guid projectId, Guid taskId, UpdateTaskRequest request, Guid userId)
+    {
+        var membership = (await _db.GetRepo<ProjectMember>()
+            .FindAsync(m => m.ProjectId == projectId && m.UserId == userId))
+            .FirstOrDefault() ?? throw new ForbiddenException("You are not a member of this project.");
+
+        if (membership.Role == ProjectRole.Developer)
+            throw new ForbiddenException("Only Admins and Managers can edit tasks.");
+
+        var task = await _db.GetRepo<AppTask>().GetByIdAsync(taskId) ?? throw new NotFoundException("Task not found.");
+        if (task.ProjectId != projectId) throw new NotFoundException("Task not found in this project.");
+
+        if (task.Status == TaskStatus.Approved)
+            throw new ValidationException("Approved tasks cannot be edited.");
+
+        if (request.Title != null) task.Title = request.Title;
+        if (request.Description != null) task.Description = request.Description;
+        if (request.Difficulty.HasValue) task.Difficulty = request.Difficulty.Value;
+        if (request.DueDate.HasValue) task.DueDate = request.DueDate.Value;
+
+        _db.GetRepo<AppTask>().Update(task);
+        await _db.SaveAsync();
+        return await BuildTaskResponseAsync(task);
+    }
+
     // ── Helpers ────────────────────────────────────────────────────────────────
 
     private async Task<ProjectRole?> GetMemberRoleAsync(Guid projectId, Guid userId)
