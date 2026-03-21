@@ -148,6 +148,20 @@ public class ProjectsController : BaseController
         return Ok(result);
     }
 
+    [HttpDelete("{projectId:guid}/tasks/{id:guid}")]
+    public async Task<IActionResult> DeleteTask(Guid projectId, Guid id)
+    {
+        await _taskService.DeleteTaskAsync(projectId, id, GetUserId());
+        return NoContent();
+    }
+
+    [HttpPatch("{projectId:guid}/tasks/{id:guid}")]
+    public async Task<IActionResult> UpdateTask(Guid projectId, Guid id, [FromBody] UpdateTaskRequest request)
+    {
+        var result = await _taskService.UpdateTaskAsync(projectId, id, request, GetUserId());
+        return Ok(result);
+    }
+
     // ─── Stats ───────────────────────────────────────────────────────────────
 
     [HttpGet("{projectId:guid}/stats")]
