@@ -30,4 +30,12 @@ public class UsersController : BaseController
         var result = await _userStatsService.GetMemberStatsAsync(projectId, userId, GetUserId());
         return Ok(result);
     }
+
+    /// <summary>Search users by username or email (for invite flow).</summary>
+    [HttpGet("search")]
+    public async Task<IActionResult> SearchUsers([FromQuery] string q)
+    {
+        var result = await _userStatsService.SearchUsersAsync(q, GetUserId());
+        return Ok(result);
+    }
 }

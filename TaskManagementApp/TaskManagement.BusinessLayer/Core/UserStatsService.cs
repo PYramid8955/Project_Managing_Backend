@@ -7,6 +7,7 @@ using TaskManagement.Domain.Enums;
 using TaskManagement.Domain.Models.Stats;
 using TaskStatus = TaskManagement.Domain.Enums.TaskStatus;
 
+
 namespace TaskManagement.BusinessLayer.Core;
 
 public class UserStatsService : IUserStatsService
@@ -96,5 +97,21 @@ public class UserStatsService : IUserStatsService
                 : 0,
             ProjectContributions = contributions
         };
+    }
+
+    public async Task<IEnumerable<UserSearchResult>> SearchUsersAsync(string query, Guid requesterId)
+    {
+        if (string.IsNullOrWhiteSpace(query) || query.Length < 2)
+            return [];
+
+        var lower = query.Trim().ToLower();
+        var users = await _db.GetRepo<User>().Query()
+            .Where(u => u.Id != requesterId &&
+                (u.Email.ToLower().Contains(lower) || u.Username.ToLower().Contains(lower)))
+            .Take(10)
+            .Select(u => new UserSearchResult { UserId = u.Id, Username = u.Username, Email = u.Email })
+            .ToListAsync();
+
+        return users;
     }
 }
