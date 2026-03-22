@@ -31,4 +31,13 @@ public class AuthController : BaseController
         var result = await _authService.LoginAsync(request);
         return Ok(result);
     }
+
+    /// <summary>Change password for the authenticated user.</summary>
+    [HttpPost("change-password")]
+    [Authorize]
+    public async Task<IActionResult> ChangePassword([FromBody] ChangePasswordRequest request)
+    {
+        await _authService.ChangePasswordAsync(GetUserId(), request);
+        return Ok(new { message = "Password changed successfully." });
+    }
 }

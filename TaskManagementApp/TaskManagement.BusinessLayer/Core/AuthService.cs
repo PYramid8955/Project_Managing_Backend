@@ -67,4 +67,17 @@ public class AuthService : IAuthService
             Email = user.Email
         };
     }
+
+    public async Task ChangePasswordAsync(Guid userId, ChangePasswordRequest request)
+    {
+        var user = await _db.GetRepo<User>().GetByIdAsync(userId)
+            ?? throw new NotFoundException("User not found.");
+
+        if (!BCrypt.Net.BCrypt.Verify(request.CurrentPassword, user.PasswordHash))
+            throw new ValidationException("Current password is incorrect.");
+
+        user.PasswordHash = BCrypt.Net.BCrypt.HashPassword(request.NewPassword);
+        _db.GetRepo<User>().Update(user);
+        await _db.SaveAsync();
+    }
 }
