@@ -234,6 +234,48 @@ public class ProjectService : IProjectService
             throw new ForbiddenException("You are not a member of this project.");
     }
 
+    public async Task<ProjectResponse> UpdateProjectAsync(Guid projectId, UpdateProjectRequest request, Guid userId)
+    {
+        var membership = (await _db.GetRepo<ProjectMember>()
+            .FindAsync(m => m.ProjectId == projectId && m.UserId == userId))
+            .FirstOrDefault() ?? throw new ForbiddenException("You are not a member of this project.");
+
+        if (membership.Role != ProjectRole.Admin)
+            throw new ForbiddenException("Only Admins can update project details.");
+
+        var project = await _db.GetRepo<Project>().GetByIdAsync(projectId)
+            ?? throw new NotFoundException("Project not found.");
+
+        if (request.Name != null) project.Name = request.Name;
+        if (request.Description != null) project.Description = request.Description;
+
+        _db.GetRepo<Project>().Update(project);
+        await _db.SaveAsync();
+
+        var creator = await _db.GetRepo<User>().GetByIdAsync(project.CreatedById);
+        var memberCount = await _db.GetRepo<ProjectMember>().CountAsync(m => m.ProjectId == projectId);
+        return BuildProjectResponse(project, creator?.Username ?? "", memberCount);
+    }
+
+    public async Task DeleteProjectAsync(Guid projectId, Guid userId)
+    {
+        var membership = (await _db.GetRepo<ProjectMember>()
+            .FindAsync(m => m.ProjectId == projectId && m.UserId == userId))
+            .FirstOrDefault() ?? throw new ForbiddenException("You are not a member of this project.");
+
+        if (membership.Role != ProjectRole.Admin)
+            throw new ForbiddenException("Only Admins can delete a project.");
+
+        var project = await _db.GetRepo<Project>().GetByIdAsync(projectId)
+            ?? throw new NotFoundException("Project not found.");
+
+        if (project.CreatedById != userId)
+            throw new ForbiddenException("Only the project creator can delete it.");
+
+        _db.GetRepo<Project>().Delete(project);
+        await _db.SaveAsync();
+    }
+
     private static ProjectResponse BuildProjectResponse(Project p, string creatorUsername, int memberCount) =>
         new() { Id = p.Id, Name = p.Name, Description = p.Description, CreatedById = p.CreatedById, CreatedByUsername = creatorUsername, CreatedAt = p.CreatedAt, MemberCount = memberCount };
 }

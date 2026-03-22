@@ -12,4 +12,6 @@ public interface IProjectService
     Task<IEnumerable<MemberResponse>> GetMembersAsync(Guid projectId, Guid requestingUserId);
     Task UpdateMemberRoleAsync(Guid projectId, Guid targetUserId, UpdateMemberRoleRequest request, Guid requestingUserId);
     Task AssignDeveloperToManagerAsync(Guid projectId, Guid developerUserId, AssignManagerRequest request, Guid requestingUserId);
+    Task<ProjectResponse> UpdateProjectAsync(Guid projectId, UpdateProjectRequest request, Guid userId);
+    Task DeleteProjectAsync(Guid projectId, Guid userId);
 }

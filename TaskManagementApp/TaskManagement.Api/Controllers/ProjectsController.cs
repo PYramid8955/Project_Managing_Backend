@@ -54,6 +54,20 @@ public class ProjectsController : BaseController
         return Ok(result);
     }
 
+    [HttpPatch("{id:guid}")]
+    public async Task<IActionResult> UpdateProject(Guid id, [FromBody] UpdateProjectRequest request)
+    {
+        var result = await _projectService.UpdateProjectAsync(id, request, GetUserId());
+        return Ok(result);
+    }
+
+    [HttpDelete("{id:guid}")]
+    public async Task<IActionResult> DeleteProject(Guid id)
+    {
+        await _projectService.DeleteProjectAsync(id, GetUserId());
+        return NoContent();
+    }
+
     // ─── Member Management ───────────────────────────────────────────────────
 
     [HttpGet("{id:guid}/members")]
