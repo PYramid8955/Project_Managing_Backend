@@ -69,6 +69,9 @@ public class TaskService : ITaskService
         if (request.AssignmentMode == AssignmentMode.Direct && !request.AssignedToId.HasValue)
             throw new ValidationException("Direct assignment mode requires a specific user to be assigned.");
 
+        if (request.DueDate.HasValue && request.DueDate.Value < DateTime.UtcNow)
+            throw new ValidationException("Due date cannot be in the past.");
+
         var task = new AppTask
         {
             Title = request.Title,
