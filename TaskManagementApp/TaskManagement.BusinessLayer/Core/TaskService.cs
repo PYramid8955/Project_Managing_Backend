@@ -101,14 +101,19 @@ public class TaskService : ITaskService
         return await BuildTaskResponseAsync(task);
     }
 
-    public async Task<IEnumerable<TaskResponse>> GetProjectTasksAsync(Guid projectId, Guid userId)
+    public async Task<IEnumerable<TaskResponse>> GetProjectTasksAsync(Guid projectId, Guid userId, string? status = null, string? difficulty = null)
     {
         await EnsureMemberAsync(projectId, userId);
 
-        var tasks = await _db.GetRepo<AppTask>().Query()
-            .Where(t => t.ProjectId == projectId)
-            .OrderByDescending(t => t.CreatedAt)
-            .ToListAsync();
+        var query = _db.GetRepo<AppTask>().Query().Where(t => t.ProjectId == projectId);
+
+        if (!string.IsNullOrEmpty(status) && Enum.TryParse<TaskStatus>(status, out var parsedStatus))
+            query = query.Where(t => t.Status == parsedStatus);
+
+        if (!string.IsNullOrEmpty(difficulty) && Enum.TryParse<TaskDifficulty>(difficulty, out var parsedDiff))
+            query = query.Where(t => t.Difficulty == parsedDiff);
+
+        var tasks = await query.OrderByDescending(t => t.CreatedAt).ToListAsync();
 
         var result = new List<TaskResponse>();
         foreach (var t in tasks)

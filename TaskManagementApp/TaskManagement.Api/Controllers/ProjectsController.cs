@@ -127,9 +127,9 @@ public class ProjectsController : BaseController
     }
 
     [HttpGet("{projectId:guid}/tasks")]
-    public async Task<IActionResult> GetTasks(Guid projectId)
+    public async Task<IActionResult> GetTasks(Guid projectId, [FromQuery] string? status, [FromQuery] string? difficulty)
     {
-        var result = await _taskService.GetProjectTasksAsync(projectId, GetUserId());
+        var result = await _taskService.GetProjectTasksAsync(projectId, GetUserId(), status, difficulty);
         return Ok(result);
     }
 
