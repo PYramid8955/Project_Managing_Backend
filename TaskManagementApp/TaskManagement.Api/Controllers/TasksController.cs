@@ -59,4 +59,12 @@ public class TasksController : BaseController
         var result = await _commentService.GetTaskCommentsAsync(projectId, taskId, GetUserId());
         return Ok(result);
     }
+
+    /// <summary>Delete a comment (author only).</summary>
+    [HttpDelete("{projectId:guid}/comments/{commentId:guid}")]
+    public async Task<IActionResult> DeleteComment(Guid projectId, Guid commentId)
+    {
+        await _commentService.DeleteCommentAsync(projectId, commentId, GetUserId());
+        return NoContent();
+    }
 }

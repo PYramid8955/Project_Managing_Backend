@@ -6,4 +6,5 @@ public interface ICommentService
 {
     Task<TaskCommentResponse> AddCommentAsync(Guid projectId, Guid taskId, TaskCommentRequest request, Guid userId);
     Task<IEnumerable<TaskCommentResponse>> GetTaskCommentsAsync(Guid projectId, Guid taskId, Guid userId);
+    Task DeleteCommentAsync(Guid projectId, Guid commentId, Guid userId);
 }

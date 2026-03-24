@@ -85,6 +85,20 @@ public class CommentService : ICommentService
         return result;
     }
 
+    public async Task DeleteCommentAsync(Guid projectId, Guid commentId, Guid userId)
+    {
+        await EnsureMemberAsync(projectId, userId);
+
+        var comment = await _db.GetRepo<TaskComment>().GetByIdAsync(commentId)
+            ?? throw new NotFoundException("Comment not found.");
+
+        if (comment.UserId != userId)
+            throw new ForbiddenException("You can only delete your own comments.");
+
+        _db.GetRepo<TaskComment>().Delete(comment);
+        await _db.SaveAsync();
+    }
+
     private async Task EnsureMemberAsync(Guid projectId, Guid userId)
     {
         var isMember = await _db.GetRepo<ProjectMember>()
