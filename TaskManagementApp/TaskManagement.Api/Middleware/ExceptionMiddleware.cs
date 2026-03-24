@@ -22,7 +22,14 @@ public class ExceptionMiddleware : IMiddleware
         }
         catch (Exception ex)
         {
-            _logger.LogError(ex, "Unhandled exception: {Message}", ex.Message);
+            var isServerError = ex is not (NotFoundException or ForbiddenException or
+                UnauthorizedException or ConflictException or ValidationException or ArgumentException);
+
+            if (isServerError)
+                _logger.LogError(ex, "Unhandled server error on {Method} {Path}", context.Request.Method, context.Request.Path);
+            else
+                _logger.LogWarning("Client error: {Message}", ex.Message);
+
             await HandleExceptionAsync(context, ex);
         }
     }
