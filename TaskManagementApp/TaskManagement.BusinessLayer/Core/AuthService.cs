@@ -80,4 +80,22 @@ public class AuthService : IAuthService
         _db.GetRepo<User>().Update(user);
         await _db.SaveAsync();
     }
+
+    public async Task<AuthResponse> UpdateProfileAsync(Guid userId, UpdateProfileRequest request)
+    {
+        var user = await _db.GetRepo<User>().GetByIdAsync(userId)
+            ?? throw new NotFoundException("User not found.");
+
+        if (request.Username != null)
+        {
+            var taken = (await _db.GetRepo<User>().FindAsync(u => u.Username == request.Username && u.Id != userId)).Any();
+            if (taken) throw new ConflictException("Username is already taken.");
+            user.Username = request.Username;
+        }
+
+        _db.GetRepo<User>().Update(user);
+        await _db.SaveAsync();
+
+        return new AuthResponse { Token = _jwt.GenerateToken(user), UserId = user.Id, Username = user.Username, Email = user.Email };
+    }
 }

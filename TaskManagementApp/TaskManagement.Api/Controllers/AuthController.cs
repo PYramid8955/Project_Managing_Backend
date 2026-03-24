@@ -40,4 +40,13 @@ public class AuthController : BaseController
         await _authService.ChangePasswordAsync(GetUserId(), request);
         return Ok(new { message = "Password changed successfully." });
     }
+
+    /// <summary>Update username for the authenticated user.</summary>
+    [HttpPatch("profile")]
+    [Authorize]
+    public async Task<IActionResult> UpdateProfile([FromBody] UpdateProfileRequest request)
+    {
+        var result = await _authService.UpdateProfileAsync(GetUserId(), request);
+        return Ok(result);
+    }
 }
