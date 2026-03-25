@@ -44,6 +44,14 @@ public class TasksController : BaseController
         return Ok(result);
     }
 
+    /// <summary>Cancel an unreviewed submission and revert task to InProgress.</summary>
+    [HttpDelete("{taskId:guid}/submissions/{submissionId:guid}")]
+    public async Task<IActionResult> CancelSubmission(Guid taskId, Guid submissionId)
+    {
+        await _submissionService.CancelSubmissionAsync(taskId, submissionId, GetUserId());
+        return NoContent();
+    }
+
     /// <summary>Add a comment to a task.</summary>
     [HttpPost("{projectId:guid}/{taskId:guid}/comments")]
     public async Task<IActionResult> AddComment(Guid projectId, Guid taskId, [FromBody] TaskCommentRequest request)

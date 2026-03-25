@@ -7,4 +7,5 @@ public interface ISubmissionService
 {
     Task<SubmissionResponse> CreateSubmissionAsync(Guid taskId, IFormFile? file, string? comment, Guid userId, string wwwrootPath);
     Task<IEnumerable<SubmissionResponse>> GetTaskSubmissionsAsync(Guid taskId, Guid userId);
+    Task CancelSubmissionAsync(Guid taskId, Guid submissionId, Guid userId);
 }

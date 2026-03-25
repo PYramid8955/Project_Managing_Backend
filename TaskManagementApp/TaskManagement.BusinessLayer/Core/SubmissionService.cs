@@ -122,4 +122,31 @@ public class SubmissionService : ISubmissionService
 
         return result;
     }
+
+    public async Task CancelSubmissionAsync(Guid taskId, Guid submissionId, Guid userId)
+    {
+        var task = await _db.GetRepo<AppTask>().GetByIdAsync(taskId)
+            ?? throw new NotFoundException("Task not found.");
+
+        if (task.AssignedToId != userId)
+            throw new ForbiddenException("You are not assigned to this task.");
+
+        if (task.Status != TaskStatus.Submitted)
+            throw new ValidationException("Only submitted tasks can have their submission cancelled.");
+
+        var submission = await _db.GetRepo<TaskSubmission>().GetByIdAsync(submissionId)
+            ?? throw new NotFoundException("Submission not found.");
+
+        if (submission.TaskId != taskId)
+            throw new ValidationException("Submission does not belong to this task.");
+
+        if (submission.Review != null)
+            throw new ValidationException("Cannot cancel a submission that has already been reviewed.");
+
+        // Revert task to InProgress
+        task.Status = TaskStatus.InProgress;
+        _db.GetRepo<AppTask>().Update(task);
+        _db.GetRepo<TaskSubmission>().Delete(submission);
+        await _db.SaveAsync();
+    }
 }
