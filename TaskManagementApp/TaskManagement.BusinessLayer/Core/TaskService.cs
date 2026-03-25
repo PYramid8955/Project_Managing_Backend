@@ -104,7 +104,7 @@ public class TaskService : ITaskService
         return await BuildTaskResponseAsync(task);
     }
 
-    public async Task<IEnumerable<TaskResponse>> GetProjectTasksAsync(Guid projectId, Guid userId, string? status = null, string? difficulty = null)
+    public async Task<IEnumerable<TaskResponse>> GetProjectTasksAsync(Guid projectId, Guid userId, string? status = null, string? difficulty = null, string? sortBy = null)
     {
         await EnsureMemberAsync(projectId, userId);
 
@@ -116,7 +116,15 @@ public class TaskService : ITaskService
         if (!string.IsNullOrEmpty(difficulty) && Enum.TryParse<TaskDifficulty>(difficulty, out var parsedDiff))
             query = query.Where(t => t.Difficulty == parsedDiff);
 
-        var tasks = await query.OrderByDescending(t => t.CreatedAt).ToListAsync();
+        query = sortBy switch
+        {
+            "dueDate" => query.OrderBy(t => t.DueDate == null).ThenBy(t => t.DueDate),
+            "difficulty" => query.OrderByDescending(t => t.Difficulty),
+            "status" => query.OrderBy(t => t.Status),
+            _ => query.OrderByDescending(t => t.CreatedAt)
+        };
+
+        var tasks = await query.ToListAsync();
 
         var result = new List<TaskResponse>();
         foreach (var t in tasks)
