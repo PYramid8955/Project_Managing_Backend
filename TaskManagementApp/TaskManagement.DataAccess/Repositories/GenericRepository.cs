@@ -40,4 +40,10 @@ public class GenericRepository<T> where T : class
 
     public async Task<bool> AnyAsync(Expression<Func<T, bool>> predicate) =>
         await _dbSet.AnyAsync(predicate);
+
+    public async Task<T?> FirstOrDefaultAsync(Expression<Func<T, bool>> predicate) =>
+        await _dbSet.FirstOrDefaultAsync(predicate);
+
+    public async Task AddRangeAsync(IEnumerable<T> entities) =>
+        await _dbSet.AddRangeAsync(entities);
 }
