@@ -36,14 +36,26 @@ public class ProjectService : IProjectService
         var projects = await _db.GetRepo<Project>().Query()
             .Where(p => memberships.Contains(p.Id)).ToListAsync();
 
-        var result = new List<ProjectResponse>();
-        foreach (var p in projects)
-        {
-            var count = await _db.GetRepo<ProjectMember>().CountAsync(m => m.ProjectId == p.Id);
-            var creator = await _db.GetRepo<User>().GetByIdAsync(p.CreatedById);
-            result.Add(BuildProjectResponse(p, creator?.Username ?? "", count));
-        }
-        return result;
+        if (projects.Count == 0) return Enumerable.Empty<ProjectResponse>();
+
+        var projectIds = projects.Select(p => p.Id).ToList();
+
+        var memberCounts = await _db.GetRepo<ProjectMember>().Query()
+            .Where(m => projectIds.Contains(m.ProjectId))
+            .GroupBy(m => m.ProjectId)
+            .Select(g => new { ProjectId = g.Key, Count = g.Count() })
+            .ToDictionaryAsync(x => x.ProjectId, x => x.Count);
+
+        var creatorIds = projects.Select(p => p.CreatedById).Distinct().ToList();
+        var creators = await _db.GetRepo<User>().Query()
+            .Where(u => creatorIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id, u => u.Username);
+
+        return projects.Select(p => BuildProjectResponse(
+            p,
+            creators.GetValueOrDefault(p.CreatedById, ""),
+            memberCounts.GetValueOrDefault(p.Id, 0)
+        ));
     }
 
     public async Task<ProjectResponse> GetProjectByIdAsync(Guid projectId, Guid requestingUserId)
@@ -109,20 +121,21 @@ public class ProjectService : IProjectService
         await EnsureMemberAsync(projectId, requestingUserId);
 
         var members = await _db.GetRepo<ProjectMember>().FindAsync(m => m.ProjectId == projectId);
-        var userRepo = _db.GetRepo<User>();
-        var result = new List<MemberResponse>();
 
+        var userIds = members.Select(m => m.UserId)
+            .Concat(members.Where(m => m.ManagerUserId.HasValue).Select(m => m.ManagerUserId!.Value))
+            .Distinct().ToList();
+
+        var users = await _db.GetRepo<User>().Query()
+            .Where(u => userIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id);
+
+        var result = new List<MemberResponse>();
         foreach (var m in members)
         {
-            var user = await userRepo.GetByIdAsync(m.UserId);
-            if (user == null) continue;
-
-            string? managerUsername = null;
-            if (m.ManagerUserId.HasValue)
-            {
-                var manager = await userRepo.GetByIdAsync(m.ManagerUserId.Value);
-                managerUsername = manager?.Username;
-            }
+            if (!users.TryGetValue(m.UserId, out var user)) continue;
+            string? managerUsername = m.ManagerUserId.HasValue && users.TryGetValue(m.ManagerUserId.Value, out var mgr)
+                ? mgr.Username : null;
 
             result.Add(new MemberResponse
             {
