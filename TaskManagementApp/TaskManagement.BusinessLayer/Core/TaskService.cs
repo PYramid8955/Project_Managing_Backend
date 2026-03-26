@@ -125,11 +125,7 @@ public class TaskService : ITaskService
         };
 
         var tasks = await query.ToListAsync();
-
-        var result = new List<TaskResponse>();
-        foreach (var t in tasks)
-            result.Add(await BuildTaskResponseAsync(t));
-        return result;
+        return await BuildTaskResponsesAsync(tasks);
     }
 
     public async Task<TaskResponse> GetTaskByIdAsync(Guid projectId, Guid taskId, Guid userId)
@@ -291,10 +287,7 @@ public class TaskService : ITaskService
             .ThenBy(t => t.DueDate)
             .ToListAsync();
 
-        var result = new List<TaskResponse>();
-        foreach (var t in tasks)
-            result.Add(await BuildTaskResponseAsync(t));
-        return result;
+        return await BuildTaskResponsesAsync(tasks);
     }
 
     public async Task DeleteTaskAsync(Guid projectId, Guid taskId, Guid userId)
@@ -357,32 +350,52 @@ public class TaskService : ITaskService
 
     private async Task<TaskResponse> BuildTaskResponseAsync(AppTask task)
     {
-        var userRepo = _db.GetRepo<User>();
-        var creator = await userRepo.GetByIdAsync(task.CreatedById);
-        User? assignee = task.AssignedToId.HasValue ? await userRepo.GetByIdAsync(task.AssignedToId.Value) : null;
+        var responses = await BuildTaskResponsesAsync([task]);
+        return responses[0];
+    }
 
-        var eligibleUserIds = await _db.GetRepo<TaskEligibleUser>().Query()
-            .Where(eu => eu.TaskId == task.Id).Select(eu => eu.UserId).ToListAsync();
+    private async Task<List<TaskResponse>> BuildTaskResponsesAsync(IList<AppTask> tasks)
+    {
+        if (tasks.Count == 0) return [];
 
-        return new TaskResponse
+        var userIds = tasks.Select(t => t.CreatedById)
+            .Concat(tasks.Where(t => t.AssignedToId.HasValue).Select(t => t.AssignedToId!.Value))
+            .Distinct().ToList();
+
+        var users = await _db.GetRepo<User>().Query()
+            .Where(u => userIds.Contains(u.Id))
+            .ToDictionaryAsync(u => u.Id);
+
+        var taskIds = tasks.Select(t => t.Id).ToList();
+        var eligibleMap = await _db.GetRepo<TaskEligibleUser>().Query()
+            .Where(eu => taskIds.Contains(eu.TaskId))
+            .GroupBy(eu => eu.TaskId)
+            .ToDictionaryAsync(g => g.Key, g => g.Select(eu => eu.UserId).ToList());
+
+        return tasks.Select(task =>
         {
-            Id = task.Id,
-            Title = task.Title,
-            Description = task.Description,
-            ProjectId = task.ProjectId,
-            CreatedById = task.CreatedById,
-            CreatedByUsername = creator?.Username ?? "",
-            AssignedToId = task.AssignedToId,
-            AssignedToUsername = assignee?.Username,
-            Difficulty = task.Difficulty,
-            Status = task.Status,
-            AssignmentMode = task.AssignmentMode,
-            RequiresAttachment = task.RequiresAttachment,
-            RejectionFeedback = task.RejectionFeedback,
-            CreatedAt = task.CreatedAt,
-            DueDate = task.DueDate,
-            ImageUrl = task.ImageUrl,
-            EligibleUserIds = eligibleUserIds
-        };
+            users.TryGetValue(task.CreatedById, out var creator);
+            users.TryGetValue(task.AssignedToId ?? Guid.Empty, out var assignee);
+            return new TaskResponse
+            {
+                Id = task.Id,
+                Title = task.Title,
+                Description = task.Description,
+                ProjectId = task.ProjectId,
+                CreatedById = task.CreatedById,
+                CreatedByUsername = creator?.Username ?? "",
+                AssignedToId = task.AssignedToId,
+                AssignedToUsername = task.AssignedToId.HasValue ? assignee?.Username : null,
+                Difficulty = task.Difficulty,
+                Status = task.Status,
+                AssignmentMode = task.AssignmentMode,
+                RequiresAttachment = task.RequiresAttachment,
+                RejectionFeedback = task.RejectionFeedback,
+                CreatedAt = task.CreatedAt,
+                DueDate = task.DueDate,
+                ImageUrl = task.ImageUrl,
+                EligibleUserIds = eligibleMap.GetValueOrDefault(task.Id, [])
+            };
+        }).ToList();
     }
 }
