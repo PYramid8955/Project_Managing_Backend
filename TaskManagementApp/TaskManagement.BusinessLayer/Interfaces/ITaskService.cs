@@ -11,5 +11,6 @@ public interface ITaskService
     Task<TaskResponse> DelegateTaskAsync(Guid projectId, Guid taskId, DelegateTaskRequest request, Guid managerId);
     Task<TaskResponse> ReassignTaskAsync(Guid projectId, Guid taskId, ReassignTaskRequest request, Guid userId);
     Task DeleteTaskAsync(Guid projectId, Guid taskId, Guid userId);
+    Task<IEnumerable<TaskResponse>> GetMyAssignedTasksAsync(Guid userId);
     Task<TaskResponse> UpdateTaskAsync(Guid projectId, Guid taskId, UpdateTaskRequest request, Guid userId);
 }

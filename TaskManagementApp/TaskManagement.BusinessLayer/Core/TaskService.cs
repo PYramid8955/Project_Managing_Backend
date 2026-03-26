@@ -283,6 +283,20 @@ public class TaskService : ITaskService
         return await BuildTaskResponseAsync(task);
     }
 
+    public async Task<IEnumerable<TaskResponse>> GetMyAssignedTasksAsync(Guid userId)
+    {
+        var tasks = await _db.GetRepo<AppTask>().Query()
+            .Where(t => t.AssignedToId == userId && t.Status != TaskStatus.Approved)
+            .OrderBy(t => t.DueDate == null)
+            .ThenBy(t => t.DueDate)
+            .ToListAsync();
+
+        var result = new List<TaskResponse>();
+        foreach (var t in tasks)
+            result.Add(await BuildTaskResponseAsync(t));
+        return result;
+    }
+
     public async Task DeleteTaskAsync(Guid projectId, Guid taskId, Guid userId)
     {
         var membership = (await _db.GetRepo<ProjectMember>()

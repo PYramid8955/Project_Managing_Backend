@@ -31,6 +31,14 @@ public class UsersController : BaseController
         return Ok(result);
     }
 
+    /// <summary>Get all active tasks assigned to current user across all projects.</summary>
+    [HttpGet("me/tasks")]
+    public async Task<IActionResult> GetMyTasks([FromServices] ITaskService taskService)
+    {
+        var result = await taskService.GetMyAssignedTasksAsync(GetUserId());
+        return Ok(result);
+    }
+
     /// <summary>Search users by username or email (for invite flow).</summary>
     [HttpGet("search")]
     public async Task<IActionResult> SearchUsers([FromQuery] string q)
