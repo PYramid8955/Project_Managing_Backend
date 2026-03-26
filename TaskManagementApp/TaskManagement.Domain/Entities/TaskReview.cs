@@ -8,7 +8,7 @@ public class TaskReview
     public Guid SubmissionId { get; set; }
     public Guid ReviewedById { get; set; }
     public ReviewStatus Status { get; set; }
-    public string Feedback { get; set; } = string.Empty;
+    public string? Feedback { get; set; }
     public DateTime ReviewedAt { get; set; } = DateTime.UtcNow;
 
     // Navigation properties
