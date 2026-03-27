@@ -17,6 +17,9 @@ public class ProjectMember
     /// </summary>
     public Guid? ManagerUserId { get; set; }
 
+    /// <summary>True for users who joined via invite link and are awaiting role assignment by an Admin.</summary>
+    public bool IsPendingRoleAssignment { get; set; } = false;
+
     // Navigation properties
     public User User { get; set; } = null!;
     public Project Project { get; set; } = null!;
