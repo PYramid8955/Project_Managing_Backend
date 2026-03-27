@@ -17,6 +17,7 @@ public class AppDbContext : DbContext
     public DbSet<TaskReview> TaskReviews => Set<TaskReview>();
     public DbSet<TaskComment> TaskComments => Set<TaskComment>();
     public DbSet<TaskEligibleUser> TaskEligibleUsers => Set<TaskEligibleUser>();
+    public DbSet<ProjectInvitation> ProjectInvitations => Set<ProjectInvitation>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -158,6 +159,35 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(c => c.UserId)
                 .OnDelete(DeleteBehavior.Restrict);
+        });
+
+        // ProjectInvitation
+        modelBuilder.Entity<ProjectInvitation>(e =>
+        {
+            e.HasKey(i => i.Id);
+            e.Property(i => i.Id).HasColumnType("uuid");
+            e.Property(i => i.ProjectId).HasColumnType("uuid");
+            e.Property(i => i.InvitedById).HasColumnType("uuid");
+            e.Property(i => i.InvitedUserId).HasColumnType("uuid");
+            e.Property(i => i.Status).HasConversion<int>();
+            e.Property(i => i.Role).HasConversion<int?>();
+            e.HasIndex(i => i.Token).IsUnique();
+
+            e.HasOne(i => i.Project)
+                .WithMany()
+                .HasForeignKey(i => i.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(i => i.InvitedBy)
+                .WithMany()
+                .HasForeignKey(i => i.InvitedById)
+                .OnDelete(DeleteBehavior.Restrict);
+
+            e.HasOne(i => i.InvitedUser)
+                .WithMany()
+                .HasForeignKey(i => i.InvitedUserId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .IsRequired(false);
         });
 
         // TaskEligibleUser — composite PK
