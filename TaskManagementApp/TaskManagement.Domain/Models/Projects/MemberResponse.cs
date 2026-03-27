@@ -12,4 +12,5 @@ public class MemberResponse
     /// <summary>For Developers: the UserId of their assigned Manager in this project.</summary>
     public Guid? ManagerUserId { get; set; }
     public string? ManagerUsername { get; set; }
+    public bool IsPendingRoleAssignment { get; set; }
 }
