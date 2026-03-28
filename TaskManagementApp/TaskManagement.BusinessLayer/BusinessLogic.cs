@@ -30,6 +30,7 @@ public static class BusinessLogic
         services.AddScoped<IStatsService, StatsService>();
         services.AddScoped<ICommentService, CommentService>();
         services.AddScoped<IUserStatsService, UserStatsService>();
+        services.AddScoped<IProjectInvitationService, ProjectInvitationService>();
 
         return services;
     }
