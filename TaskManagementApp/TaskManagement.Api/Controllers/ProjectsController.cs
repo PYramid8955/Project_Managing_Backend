@@ -2,6 +2,7 @@ using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using TaskManagement.BusinessLayer.Interfaces;
 using TaskManagement.BusinessLayer.Structure;
+using TaskManagement.Domain.Models.Invitations;
 using TaskManagement.Domain.Models.Projects;
 using TaskManagement.Domain.Models.Tasks;
 
@@ -12,23 +13,29 @@ namespace TaskManagement.Api.Controllers;
 public class ProjectsController : BaseController
 {
     private readonly IProjectService _projectService;
+    private readonly IProjectInvitationService _invitationService;
     private readonly ITaskService _taskService;
     private readonly IStatsService _statsService;
     private readonly FileStorageHelper _fileStorage;
     private readonly IWebHostEnvironment _env;
+    private readonly IConfiguration _config;
 
     public ProjectsController(
         IProjectService projectService,
+        IProjectInvitationService invitationService,
         ITaskService taskService,
         IStatsService statsService,
         FileStorageHelper fileStorage,
-        IWebHostEnvironment env)
+        IWebHostEnvironment env,
+        IConfiguration config)
     {
         _projectService = projectService;
+        _invitationService = invitationService;
         _taskService = taskService;
         _statsService = statsService;
         _fileStorage = fileStorage;
         _env = env;
+        _config = config;
     }
 
     // ─── Project CRUD ────────────────────────────────────────────────────────
@@ -77,11 +84,33 @@ public class ProjectsController : BaseController
         return Ok(result);
     }
 
-    [HttpPost("{id:guid}/invite")]
-    public async Task<IActionResult> InviteMember(Guid id, [FromBody] InviteMemberRequest request)
+    [HttpPost("{id:guid}/invitations")]
+    public async Task<IActionResult> SendInvitation(Guid id, [FromBody] SendInvitationRequest request)
     {
-        await _projectService.InviteMemberAsync(id, request, GetUserId());
-        return Ok(new { message = "Member invited successfully." });
+        var result = await _invitationService.SendInvitationAsync(id, request, GetUserId());
+        return Ok(result);
+    }
+
+    [HttpGet("{id:guid}/invitations")]
+    public async Task<IActionResult> GetInvitations(Guid id)
+    {
+        var result = await _invitationService.GetProjectInvitationsAsync(id, GetUserId());
+        return Ok(result);
+    }
+
+    [HttpDelete("{id:guid}/invitations/{invitationId:guid}")]
+    public async Task<IActionResult> CancelInvitation(Guid id, Guid invitationId)
+    {
+        await _invitationService.CancelInvitationAsync(id, invitationId, GetUserId());
+        return NoContent();
+    }
+
+    [HttpPost("{id:guid}/invite-link")]
+    public async Task<IActionResult> GenerateInviteLink(Guid id)
+    {
+        var frontendBase = _config["Frontend:BaseUrl"] ?? "http://localhost:5173";
+        var result = await _invitationService.GenerateInviteLinkAsync(id, GetUserId(), frontendBase);
+        return Ok(result);
     }
 
     [HttpDelete("{id:guid}/members/{userId:guid}")]
