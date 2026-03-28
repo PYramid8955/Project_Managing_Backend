@@ -145,7 +145,8 @@ public class ProjectService : IProjectService
                 Role = m.Role,
                 JoinedAt = m.JoinedAt,
                 ManagerUserId = m.ManagerUserId,
-                ManagerUsername = managerUsername
+                ManagerUsername = managerUsername,
+                IsPendingRoleAssignment = m.IsPendingRoleAssignment
             });
         }
         return result;
@@ -170,6 +171,7 @@ public class ProjectService : IProjectService
 
         var oldRole = member.Role;
         member.Role = request.NewRole;
+        member.IsPendingRoleAssignment = false;
 
         // ── Role-change cleanup ────────────────────────────────────────────────
         if (oldRole == ProjectRole.Manager && request.NewRole != ProjectRole.Manager)
@@ -243,8 +245,9 @@ public class ProjectService : IProjectService
 
     private async Task EnsureMemberAsync(Guid projectId, Guid userId)
     {
-        if (await GetMemberRoleAsync(projectId, userId) == null)
-            throw new ForbiddenException("You are not a member of this project.");
+        var members = await _db.GetRepo<ProjectMember>().FindAsync(m => m.ProjectId == projectId && m.UserId == userId);
+        var member = members.FirstOrDefault() ?? throw new ForbiddenException("You are not a member of this project.");
+        if (member.IsPendingRoleAssignment) throw new ForbiddenException("Your role has not been assigned yet. Contact the project Admin.");
     }
 
     public async Task<ProjectResponse> UpdateProjectAsync(Guid projectId, UpdateProjectRequest request, Guid userId)
