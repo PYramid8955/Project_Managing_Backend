@@ -7,6 +7,8 @@ public class InvitationResponse
     public Guid Id { get; set; }
     public Guid ProjectId { get; set; }
     public string ProjectName { get; set; } = "";
+    public string ProjectDescription { get; set; } = "";
+    public int ProjectMemberCount { get; set; }
     public string InvitedByUsername { get; set; } = "";
     public string? InvitedUserEmail { get; set; }
     public string? InvitedUsername { get; set; }

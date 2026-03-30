@@ -195,6 +195,8 @@ public class ProjectInvitationService : IProjectInvitationService
             Id = inv.Id,
             ProjectId = inv.ProjectId,
             ProjectName = project?.Name ?? "",
+            ProjectDescription = project?.Description ?? "",
+            ProjectMemberCount = await _db.GetRepo<ProjectMember>().CountAsync(m => m.ProjectId == inv.ProjectId),
             InvitedByUsername = invitedBy?.Username ?? "",
             InvitedUserEmail = invitedUser?.Email,
             InvitedUsername = invitedUser?.Username,
