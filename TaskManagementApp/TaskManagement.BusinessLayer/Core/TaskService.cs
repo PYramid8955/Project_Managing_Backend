@@ -75,7 +75,7 @@ public class TaskService : ITaskService
         var task = new AppTask
         {
             Title = request.Title,
-            Description = request.Description,
+            Description = request.Description ?? string.Empty,
             ProjectId = projectId,
             CreatedById = userId,
             AssignedToId = request.AssignedToId,
