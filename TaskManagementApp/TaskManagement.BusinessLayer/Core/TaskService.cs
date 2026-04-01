@@ -146,39 +146,59 @@ public class TaskService : ITaskService
         var task = await _db.GetRepo<AppTask>().GetByIdAsync(taskId) ?? throw new NotFoundException("Task not found.");
         if (task.ProjectId != projectId) throw new NotFoundException("Task not found in this project.");
 
+        if (request.NewStatus == TaskStatus.Approved || request.NewStatus == TaskStatus.Rejected)
+            throw new ValidationException("Use the review endpoint to approve or reject submitted tasks.");
+
         if (role == ProjectRole.Developer)
         {
             // Developer can only accept (ToDo → InProgress)
-            if (request.NewStatus == TaskStatus.InProgress && task.Status == TaskStatus.ToDo)
-            {
-                if (task.AssignmentMode == AssignmentMode.Direct)
-                    throw new ForbiddenException("This task is directly assigned and does not require acceptance.");
-
-                if (task.AssignmentMode == AssignmentMode.Invited)
-                {
-                    var isEligible = await _db.GetRepo<TaskEligibleUser>()
-                        .AnyAsync(eu => eu.TaskId == taskId && eu.UserId == userId);
-                    if (!isEligible)
-                        throw new ForbiddenException("You are not in the list of eligible developers for this task.");
-                }
-
-                if (task.AssignedToId != null && task.AssignedToId != userId)
-                    throw new ForbiddenException("This task is assigned to another developer.");
-
-                task.Status = TaskStatus.InProgress;
-                task.RejectionFeedback = null;
-                if (task.AssignedToId == null)
-                    task.AssignedToId = userId;
-            }
-            else
-            {
+            if (request.NewStatus != TaskStatus.InProgress || task.Status != TaskStatus.ToDo)
                 throw new ForbiddenException("Developers can only accept tasks (ToDo → InProgress).");
+
+            if (task.AssignmentMode == AssignmentMode.Direct)
+                throw new ForbiddenException("This task is directly assigned and does not require acceptance.");
+
+            if (task.AssignmentMode == AssignmentMode.Invited)
+            {
+                var isEligible = await _db.GetRepo<TaskEligibleUser>()
+                    .AnyAsync(eu => eu.TaskId == taskId && eu.UserId == userId);
+                if (!isEligible)
+                    throw new ForbiddenException("You are not in the list of eligible developers for this task.");
             }
+
+            if (task.AssignedToId != null && task.AssignedToId != userId)
+                throw new ForbiddenException("This task is assigned to another developer.");
+
+            task.Status = TaskStatus.InProgress;
+            task.RejectionFeedback = null;
+            if (task.AssignedToId == null)
+                task.AssignedToId = userId;
+        }
+        else if (role == ProjectRole.Manager && task.Status == TaskStatus.ToDo && request.NewStatus == TaskStatus.InProgress)
+        {
+            // Manager accepting an open task — same eligibility checks + auto-assign
+            if (task.AssignmentMode == AssignmentMode.Direct)
+                throw new ForbiddenException("This task is directly assigned and does not require acceptance.");
+
+            if (task.AssignmentMode == AssignmentMode.Invited)
+            {
+                var isEligible = await _db.GetRepo<TaskEligibleUser>()
+                    .AnyAsync(eu => eu.TaskId == taskId && eu.UserId == userId);
+                if (!isEligible)
+                    throw new ForbiddenException("You are not in the list of eligible members for this task.");
+            }
+
+            if (task.AssignedToId != null && task.AssignedToId != userId)
+                throw new ForbiddenException("This task is assigned to another member.");
+
+            task.Status = TaskStatus.InProgress;
+            task.RejectionFeedback = null;
+            if (task.AssignedToId == null)
+                task.AssignedToId = userId;
         }
         else
         {
-            if (request.NewStatus == TaskStatus.Approved || request.NewStatus == TaskStatus.Rejected)
-                throw new ValidationException("Use the review endpoint to approve or reject submitted tasks.");
+            // Admin, or Manager doing other status overrides
             task.Status = request.NewStatus;
         }
 
