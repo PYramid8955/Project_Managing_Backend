@@ -30,6 +30,10 @@ public class StatsService : IStatsService
         var pending = tasks.Count(t => t.Status == TaskStatus.Submitted || t.Status == TaskStatus.InProgress);
         var rejected = tasks.Count(t => t.Status == TaskStatus.Rejected);
         var totalPoints = tasks.Where(t => t.Status == TaskStatus.Approved).Sum(t => (int)t.Difficulty);
+        var easy = tasks.Count(t => t.Difficulty == TaskDifficulty.Easy);
+        var medium = tasks.Count(t => t.Difficulty == TaskDifficulty.Medium);
+        var hard = tasks.Count(t => t.Difficulty == TaskDifficulty.Hard);
+        var overdue = tasks.Count(t => t.DueDate.HasValue && t.DueDate.Value < DateTime.UtcNow && t.Status != TaskStatus.Approved);
 
         return new ProjectStatsResponse
         {
@@ -40,7 +44,11 @@ public class StatsService : IStatsService
             PendingTasks = pending,
             RejectedTasks = rejected,
             ApprovalRate = total > 0 ? Math.Round((double)approved / total * 100, 1) : 0,
-            TotalPoints = totalPoints
+            TotalPoints = totalPoints,
+            EasyTasks = easy,
+            MediumTasks = medium,
+            HardTasks = hard,
+            OverdueTasks = overdue
         };
     }
 

@@ -10,4 +10,8 @@ public class ProjectStatsResponse
     public int RejectedTasks { get; set; }
     public double ApprovalRate { get; set; }
     public int TotalPoints { get; set; }
+    public int EasyTasks { get; set; }
+    public int MediumTasks { get; set; }
+    public int HardTasks { get; set; }
+    public int OverdueTasks { get; set; }
 }
