@@ -156,9 +156,16 @@ public class ProjectsController : BaseController
     }
 
     [HttpGet("{projectId:guid}/tasks")]
-    public async Task<IActionResult> GetTasks(Guid projectId, [FromQuery] string? status, [FromQuery] string? difficulty, [FromQuery] string? sortBy)
+    public async Task<IActionResult> GetTasks(
+        Guid projectId,
+        [FromQuery] string? status,
+        [FromQuery] string? difficulty,
+        [FromQuery] string? sortBy,
+        [FromQuery] bool assignedToMe = false)
     {
-        var result = await _taskService.GetProjectTasksAsync(projectId, GetUserId(), status, difficulty, sortBy);
+        var userId = GetUserId();
+        var result = await _taskService.GetProjectTasksAsync(
+            projectId, userId, status, difficulty, sortBy, assignedToMe ? userId : null);
         return Ok(result);
     }
 

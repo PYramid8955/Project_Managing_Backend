@@ -104,7 +104,7 @@ public class TaskService : ITaskService
         return await BuildTaskResponseAsync(task);
     }
 
-    public async Task<IEnumerable<TaskResponse>> GetProjectTasksAsync(Guid projectId, Guid userId, string? status = null, string? difficulty = null, string? sortBy = null)
+    public async Task<IEnumerable<TaskResponse>> GetProjectTasksAsync(Guid projectId, Guid userId, string? status = null, string? difficulty = null, string? sortBy = null, Guid? assignedToFilter = null)
     {
         await EnsureMemberAsync(projectId, userId);
 
@@ -115,6 +115,9 @@ public class TaskService : ITaskService
 
         if (!string.IsNullOrEmpty(difficulty) && Enum.TryParse<TaskDifficulty>(difficulty, out var parsedDiff))
             query = query.Where(t => t.Difficulty == parsedDiff);
+
+        if (assignedToFilter.HasValue)
+            query = query.Where(t => t.AssignedToId == assignedToFilter.Value);
 
         query = sortBy switch
         {
