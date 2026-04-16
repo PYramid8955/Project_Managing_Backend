@@ -142,7 +142,7 @@ public class ProjectInvitationService : IProjectInvitationService
         {
             UserId = userId,
             ProjectId = invitation.ProjectId,
-            Role = invitation.Role ?? ProjectRole.Developer,
+            Role = invitation.IsLinkInvitation ? ProjectRole.Unassigned : (invitation.Role ?? ProjectRole.Developer),
             IsPendingRoleAssignment = invitation.IsLinkInvitation
         };
 
