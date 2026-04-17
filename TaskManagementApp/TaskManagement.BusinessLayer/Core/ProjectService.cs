@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TaskManagement.BusinessLayer.Interfaces;
 using TaskManagement.BusinessLayer.Structure.Exceptions;
 using TaskManagement.DataAccess;
+using TaskManagement.Domain;
 using TaskManagement.Domain.Entities;
 using TaskManagement.Domain.Enums;
 using TaskManagement.Domain.Models.Projects;
@@ -11,10 +12,12 @@ namespace TaskManagement.BusinessLayer.Core;
 public class ProjectService : IProjectService
 {
     private readonly DbSession _db;
+    private readonly INotificationService _notifications;
 
-    public ProjectService(DbSession db)
+    public ProjectService(DbSession db, INotificationService notifications)
     {
         _db = db;
+        _notifications = notifications;
     }
 
     public async Task<ProjectResponse> CreateProjectAsync(CreateProjectRequest request, Guid userId)
@@ -114,6 +117,16 @@ public class ProjectService : IProjectService
 
         memberRepo.Delete(member);
         await _db.SaveAsync();
+
+        var project = await _db.GetRepo<Project>().GetByIdAsync(projectId);
+        await _notifications.CreateAsync(
+            targetUserId,
+            NotificationType.RemovedFromProject,
+            "Removed from project",
+            $"You have been removed from the project \"{project?.Name}\".",
+            projectId,
+            "Project"
+        );
     }
 
     public async Task<IEnumerable<MemberResponse>> GetMembersAsync(Guid projectId, Guid requestingUserId)
@@ -192,6 +205,19 @@ public class ProjectService : IProjectService
 
         memberRepo.Update(member);
         await _db.SaveAsync();
+
+        var project = await _db.GetRepo<Project>().GetByIdAsync(projectId);
+        var isFirstAssignment = oldRole == ProjectRole.Unassigned;
+        await _notifications.CreateAsync(
+            targetUserId,
+            isFirstAssignment ? NotificationType.RoleAssigned : NotificationType.RoleChanged,
+            isFirstAssignment ? "Role assigned" : "Role changed",
+            isFirstAssignment
+                ? $"You have been assigned the role of {request.NewRole} in \"{project?.Name}\"."
+                : $"Your role in \"{project?.Name}\" has been changed from {oldRole} to {request.NewRole}.",
+            projectId,
+            "Project"
+        );
     }
 
     public async Task AssignDeveloperToManagerAsync(Guid projectId, Guid developerUserId, AssignManagerRequest request, Guid requestingUserId)
