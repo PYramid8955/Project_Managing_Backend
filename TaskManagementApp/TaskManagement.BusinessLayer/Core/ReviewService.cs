@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TaskManagement.BusinessLayer.Interfaces;
 using TaskManagement.BusinessLayer.Structure.Exceptions;
 using TaskManagement.DataAccess;
+using TaskManagement.Domain;
 using TaskManagement.Domain.Entities;
 using TaskManagement.Domain.Enums;
 using TaskManagement.Domain.Models.Reviews;
@@ -12,10 +13,12 @@ namespace TaskManagement.BusinessLayer.Core;
 public class ReviewService : IReviewService
 {
     private readonly DbSession _db;
+    private readonly INotificationService _notifications;
 
-    public ReviewService(DbSession db)
+    public ReviewService(DbSession db, INotificationService notifications)
     {
         _db = db;
+        _notifications = notifications;
     }
 
     public async Task<ReviewResponse> CreateReviewAsync(Guid submissionId, CreateReviewRequest request, Guid userId)
@@ -63,6 +66,21 @@ public class ReviewService : IReviewService
 
         _db.GetRepo<AppTask>().Update(task);
         await _db.SaveAsync();
+
+        if (task.AssignedToId.HasValue)
+        {
+            var approved = request.Status == ReviewStatus.Approved;
+            await _notifications.CreateAsync(
+                task.AssignedToId.Value,
+                approved ? NotificationType.TaskApproved : NotificationType.TaskRejected,
+                approved ? "Task approved" : "Task rejected",
+                approved
+                    ? $"Your submission for \"{task.Title}\" was approved."
+                    : $"Your submission for \"{task.Title}\" was rejected. Feedback: {request.Feedback}",
+                task.Id,
+                "Task"
+            );
+        }
 
         var reviewer = await _db.GetRepo<User>().GetByIdAsync(userId);
 
