@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TaskManagement.BusinessLayer.Interfaces;
 using TaskManagement.BusinessLayer.Structure.Exceptions;
 using TaskManagement.DataAccess;
+using TaskManagement.Domain;
 using TaskManagement.Domain.Entities;
 using TaskManagement.Domain.Enums;
 using TaskManagement.Domain.Models.Tasks;
@@ -12,10 +13,12 @@ namespace TaskManagement.BusinessLayer.Core;
 public class TaskService : ITaskService
 {
     private readonly DbSession _db;
+    private readonly INotificationService _notifications;
 
-    public TaskService(DbSession db)
+    public TaskService(DbSession db, INotificationService notifications)
     {
         _db = db;
+        _notifications = notifications;
     }
 
     public async Task<TaskResponse> CreateTaskAsync(Guid projectId, CreateTaskRequest request, Guid userId, string? imageUrl = null)
@@ -101,6 +104,22 @@ public class TaskService : ITaskService
         }
 
         await _db.SaveAsync();
+
+        // Notify direct assignee if someone else created the task for them
+        if (task.AssignmentMode == AssignmentMode.Direct
+            && task.AssignedToId.HasValue
+            && task.AssignedToId.Value != userId)
+        {
+            await _notifications.CreateAsync(
+                task.AssignedToId.Value,
+                NotificationType.TaskAssigned,
+                "New task assigned",
+                $"You have been assigned the task \"{task.Title}\".",
+                task.Id,
+                "Task"
+            );
+        }
+
         return await BuildTaskResponseAsync(task);
     }
 
@@ -243,6 +262,15 @@ public class TaskService : ITaskService
         _db.GetRepo<AppTask>().Update(task);
         await _db.SaveAsync();
 
+        await _notifications.CreateAsync(
+            request.DeveloperUserId,
+            NotificationType.TaskDelegated,
+            "Task delegated to you",
+            $"A task has been delegated to you: \"{task.Title}\".",
+            task.Id,
+            "Task"
+        );
+
         return await BuildTaskResponseAsync(task);
     }
 
@@ -299,6 +327,19 @@ public class TaskService : ITaskService
 
         _db.GetRepo<AppTask>().Update(task);
         await _db.SaveAsync();
+
+        if (request.AssignedToId.HasValue && request.AssignedToId.Value != userId)
+        {
+            await _notifications.CreateAsync(
+                request.AssignedToId.Value,
+                NotificationType.TaskAssigned,
+                "Task assigned to you",
+                $"You have been assigned the task \"{task.Title}\".",
+                task.Id,
+                "Task"
+            );
+        }
+
         return await BuildTaskResponseAsync(task);
     }
 
