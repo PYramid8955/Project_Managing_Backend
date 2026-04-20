@@ -2,6 +2,7 @@ using Microsoft.EntityFrameworkCore;
 using TaskManagement.BusinessLayer.Interfaces;
 using TaskManagement.BusinessLayer.Structure.Exceptions;
 using TaskManagement.DataAccess;
+using TaskManagement.Domain;
 using TaskManagement.Domain.Entities;
 using TaskManagement.Domain.Models.Tasks;
 
@@ -10,10 +11,12 @@ namespace TaskManagement.BusinessLayer.Core;
 public class CommentService : ICommentService
 {
     private readonly DbSession _db;
+    private readonly INotificationService _notifications;
 
-    public CommentService(DbSession db)
+    public CommentService(DbSession db, INotificationService notifications)
     {
         _db = db;
+        _notifications = notifications;
     }
 
     public async Task<TaskCommentResponse> AddCommentAsync(Guid projectId, Guid taskId, TaskCommentRequest request, Guid userId)
@@ -35,6 +38,19 @@ public class CommentService : ICommentService
 
         await _db.GetRepo<TaskComment>().AddAsync(comment);
         await _db.SaveAsync();
+
+        if (task.AssignedToId.HasValue && task.AssignedToId.Value != userId)
+        {
+            var commenter = await _db.GetRepo<User>().GetByIdAsync(userId);
+            await _notifications.CreateAsync(
+                task.AssignedToId.Value,
+                NotificationType.CommentAdded,
+                "New comment on your task",
+                $"{commenter?.Username ?? "Someone"} commented on \"{task.Title}\".",
+                task.Id,
+                "Task"
+            );
+        }
 
         var user = await _db.GetRepo<User>().GetByIdAsync(userId);
 
