@@ -4,6 +4,7 @@ using TaskManagement.BusinessLayer.Interfaces;
 using TaskManagement.BusinessLayer.Structure;
 using TaskManagement.BusinessLayer.Structure.Exceptions;
 using TaskManagement.DataAccess;
+using TaskManagement.Domain;
 using TaskManagement.Domain.Entities;
 using TaskManagement.Domain.Enums;
 using TaskManagement.Domain.Models.Submissions;
@@ -15,11 +16,13 @@ public class SubmissionService : ISubmissionService
 {
     private readonly DbSession _db;
     private readonly FileStorageHelper _fileStorage;
+    private readonly INotificationService _notifications;
 
-    public SubmissionService(DbSession db, FileStorageHelper fileStorage)
+    public SubmissionService(DbSession db, FileStorageHelper fileStorage, INotificationService notifications)
     {
         _db = db;
         _fileStorage = fileStorage;
+        _notifications = notifications;
     }
 
     public async Task<SubmissionResponse> CreateSubmissionAsync(
@@ -66,7 +69,24 @@ public class SubmissionService : ISubmissionService
 
         await _db.SaveAsync();
 
+        // Notify all admins and managers in the project about the new submission
+        var reviewers = await _db.GetRepo<ProjectMember>()
+            .FindAsync(m => m.ProjectId == task.ProjectId
+                         && (m.Role == ProjectRole.Admin || m.Role == ProjectRole.Manager));
+
         var submitter = await _db.GetRepo<User>().GetByIdAsync(userId);
+
+        foreach (var reviewer in reviewers)
+        {
+            await _notifications.CreateAsync(
+                reviewer.UserId,
+                NotificationType.TaskSubmitted,
+                "Task submitted for review",
+                $"{submitter?.Username ?? "A developer"} submitted \"{task.Title}\" for review.",
+                task.Id,
+                "Task"
+            );
+        }
 
         return new SubmissionResponse
         {
