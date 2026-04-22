@@ -59,12 +59,16 @@ public class AuthService : IAuthService
         if (user == null || !BCrypt.Net.BCrypt.Verify(request.Password, user.PasswordHash))
             throw new UnauthorizedException("Invalid email or password.");
 
+        if (user.IsDeleted)
+            throw new UnauthorizedException("This account has been deleted.");
+
         return new AuthResponse
         {
             Token = _jwt.GenerateToken(user),
             UserId = user.Id,
             Username = user.Username,
-            Email = user.Email
+            Email = user.Email,
+            AvatarUrl = user.AvatarUrl
         };
     }
 
@@ -96,6 +100,6 @@ public class AuthService : IAuthService
         _db.GetRepo<User>().Update(user);
         await _db.SaveAsync();
 
-        return new AuthResponse { Token = _jwt.GenerateToken(user), UserId = user.Id, Username = user.Username, Email = user.Email };
+        return new AuthResponse { Token = _jwt.GenerateToken(user), UserId = user.Id, Username = user.Username, Email = user.Email, AvatarUrl = user.AvatarUrl };
     }
 }
