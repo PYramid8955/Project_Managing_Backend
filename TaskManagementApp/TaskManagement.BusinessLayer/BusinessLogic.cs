@@ -31,6 +31,8 @@ public static class BusinessLogic
         services.AddScoped<ICommentService, CommentService>();
         services.AddScoped<IUserStatsService, UserStatsService>();
         services.AddScoped<IProjectInvitationService, ProjectInvitationService>();
+        services.AddScoped<INotificationService, NotificationService>();
+        services.AddScoped<IUserService, UserService>();
 
         return services;
     }
