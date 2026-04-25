@@ -18,6 +18,8 @@ public class AppDbContext : DbContext
     public DbSet<TaskComment> TaskComments => Set<TaskComment>();
     public DbSet<TaskEligibleUser> TaskEligibleUsers => Set<TaskEligibleUser>();
     public DbSet<ProjectInvitation> ProjectInvitations => Set<ProjectInvitation>();
+    public DbSet<Notification> Notifications => Set<Notification>();
+    public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -188,6 +190,34 @@ public class AppDbContext : DbContext
                 .HasForeignKey(i => i.InvitedUserId)
                 .OnDelete(DeleteBehavior.SetNull)
                 .IsRequired(false);
+        });
+
+        // Notification
+        modelBuilder.Entity<Notification>(e =>
+        {
+            e.HasKey(n => n.Id);
+            e.Property(n => n.Id).HasColumnType("uuid");
+            e.Property(n => n.UserId).HasColumnType("uuid");
+            e.Property(n => n.EntityId).HasColumnType("uuid");
+
+            e.HasOne(n => n.User)
+                .WithMany()
+                .HasForeignKey(n => n.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // NotificationPreference
+        modelBuilder.Entity<NotificationPreference>(e =>
+        {
+            e.HasKey(p => p.Id);
+            e.Property(p => p.Id).HasColumnType("uuid");
+            e.Property(p => p.UserId).HasColumnType("uuid");
+            e.HasIndex(p => p.UserId).IsUnique();
+
+            e.HasOne(p => p.User)
+                .WithMany()
+                .HasForeignKey(p => p.UserId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         // TaskEligibleUser — composite PK
