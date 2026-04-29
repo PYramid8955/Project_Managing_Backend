@@ -17,8 +17,10 @@ public class ProjectInvitation
     public string Token { get; set; } = Guid.NewGuid().ToString("N");
     public InvitationStatus Status { get; set; } = InvitationStatus.Pending;
     public bool IsLinkInvitation { get; set; } = false;
+    public int? MaxUses { get; set; }
+    public int UseCount { get; set; } = 0;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
-    public DateTime ExpiresAt { get; set; } = DateTime.UtcNow.AddDays(7);
+    public DateTime? ExpiresAt { get; set; } = DateTime.UtcNow.AddDays(7);
 
     // Navigation
     public Project Project { get; set; } = null!;
