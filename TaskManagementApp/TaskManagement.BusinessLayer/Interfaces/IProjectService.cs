@@ -1,3 +1,4 @@
+using Microsoft.AspNetCore.Http;
 using TaskManagement.Domain.Models.Projects;
 
 namespace TaskManagement.BusinessLayer.Interfaces;
@@ -13,5 +14,6 @@ public interface IProjectService
     Task UpdateMemberRoleAsync(Guid projectId, Guid targetUserId, UpdateMemberRoleRequest request, Guid requestingUserId);
     Task AssignDeveloperToManagerAsync(Guid projectId, Guid developerUserId, AssignManagerRequest request, Guid requestingUserId);
     Task<ProjectResponse> UpdateProjectAsync(Guid projectId, UpdateProjectRequest request, Guid userId);
+    Task<string> UploadProjectImageAsync(Guid projectId, IFormFile file, Guid userId, string webRootPath);
     Task DeleteProjectAsync(Guid projectId, Guid userId);
 }
