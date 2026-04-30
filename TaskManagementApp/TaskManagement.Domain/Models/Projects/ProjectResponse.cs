@@ -9,4 +9,5 @@ public class ProjectResponse
     public string CreatedByUsername { get; set; } = string.Empty;
     public DateTime CreatedAt { get; set; }
     public int MemberCount { get; set; }
+    public string? ImageUrl { get; set; }
 }

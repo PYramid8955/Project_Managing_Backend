@@ -17,5 +17,10 @@ public class InvitationResponse
     public InvitationStatus Status { get; set; }
     public bool IsLinkInvitation { get; set; }
     public DateTime CreatedAt { get; set; }
-    public DateTime ExpiresAt { get; set; }
+    public DateTime? ExpiresAt { get; set; }
+    public int? MaxUses { get; set; }
+    public int UseCount { get; set; }
+    public bool IsExpired => ExpiresAt.HasValue && ExpiresAt.Value < DateTime.UtcNow;
+    public bool IsMaxedOut => MaxUses.HasValue && UseCount >= MaxUses.Value;
+    public bool IsActive => Status == InvitationStatus.Pending && !IsExpired && !IsMaxedOut;
 }
