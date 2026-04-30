@@ -7,6 +7,7 @@ public class Project
     public string Description { get; set; } = string.Empty;
     public Guid CreatedById { get; set; }
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public string? ImageUrl { get; set; }
 
     // Navigation properties
     public User CreatedBy { get; set; } = null!;
