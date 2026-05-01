@@ -9,6 +9,7 @@ using TaskManagement.Domain.Entities;
 using TaskManagement.Domain.Enums;
 using TaskStatus = TaskManagement.Domain.Enums.TaskStatus;
 using TaskManagement.Domain.Models.Auth;
+using TaskManagement.Domain.Models.Projects;
 using TaskManagement.Domain.Models.Users;
 
 namespace TaskManagement.BusinessLayer.Core;
@@ -130,10 +131,46 @@ public class UserService : IUserService
         return url;
     }
 
+    public async Task<IEnumerable<ProjectResponse>> GetAdminOnlyProjectsAsync(Guid userId)
+    {
+        var adminMemberships = await _db.GetRepo<ProjectMember>()
+            .FindAsync(m => m.UserId == userId && m.Role == ProjectRole.Admin);
+
+        var result = new List<ProjectResponse>();
+        foreach (var m in adminMemberships)
+        {
+            var otherAdmins = await _db.GetRepo<ProjectMember>()
+                .CountAsync(pm => pm.ProjectId == m.ProjectId && pm.Role == ProjectRole.Admin && pm.UserId != userId);
+            if (otherAdmins > 0) continue;
+
+            var project = await _db.GetRepo<Project>().GetByIdAsync(m.ProjectId);
+            if (project == null) continue;
+            var memberCount = await _db.GetRepo<ProjectMember>().CountAsync(pm => pm.ProjectId == m.ProjectId);
+            var creator = await _db.GetRepo<User>().GetByIdAsync(project.CreatedById);
+            result.Add(new ProjectResponse
+            {
+                Id = project.Id,
+                Name = project.Name,
+                Description = project.Description,
+                CreatedById = project.CreatedById,
+                CreatedByUsername = creator?.Username ?? "",
+                CreatedAt = project.CreatedAt,
+                MemberCount = memberCount,
+                ImageUrl = project.ImageUrl
+            });
+        }
+        return result;
+    }
+
     public async Task DeleteAccountAsync(Guid userId)
     {
         var user = await _db.GetRepo<User>().GetByIdAsync(userId)
             ?? throw new NotFoundException("User not found.");
+
+        // Block deletion if user is last admin of any project
+        var adminOnlyProjects = await GetAdminOnlyProjectsAsync(userId);
+        if (adminOnlyProjects.Any())
+            throw new ValidationException("You are the only admin of one or more projects. Please assign another admin before deleting your account.");
 
         // Collect admin user IDs from all projects before removing memberships
         var memberships = await _db.GetRepo<ProjectMember>().FindAsync(m => m.UserId == userId);
