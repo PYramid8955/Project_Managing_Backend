@@ -20,6 +20,7 @@ public class AppDbContext : DbContext
     public DbSet<ProjectInvitation> ProjectInvitations => Set<ProjectInvitation>();
     public DbSet<Notification> Notifications => Set<Notification>();
     public DbSet<NotificationPreference> NotificationPreferences => Set<NotificationPreference>();
+    public DbSet<ProjectEvent> ProjectEvents => Set<ProjectEvent>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -218,6 +219,33 @@ public class AppDbContext : DbContext
                 .WithMany()
                 .HasForeignKey(p => p.UserId)
                 .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        // ProjectEvent
+        modelBuilder.Entity<ProjectEvent>(e =>
+        {
+            e.HasKey(ev => ev.Id);
+            e.Property(ev => ev.Id).HasColumnType("uuid");
+            e.Property(ev => ev.ProjectId).HasColumnType("uuid");
+            e.Property(ev => ev.ActorId).HasColumnType("uuid");
+            e.Property(ev => ev.TargetUserId).HasColumnType("uuid");
+
+            e.HasOne(ev => ev.Project)
+                .WithMany()
+                .HasForeignKey(ev => ev.ProjectId)
+                .OnDelete(DeleteBehavior.Cascade);
+
+            e.HasOne(ev => ev.Actor)
+                .WithMany()
+                .HasForeignKey(ev => ev.ActorId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .IsRequired(false);
+
+            e.HasOne(ev => ev.TargetUser)
+                .WithMany()
+                .HasForeignKey(ev => ev.TargetUserId)
+                .OnDelete(DeleteBehavior.SetNull)
+                .IsRequired(false);
         });
 
         // TaskEligibleUser — composite PK
