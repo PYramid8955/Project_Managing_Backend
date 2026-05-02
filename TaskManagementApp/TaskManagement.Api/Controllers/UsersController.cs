@@ -75,6 +75,14 @@ public class UsersController : BaseController
         return Ok(result);
     }
 
+    /// <summary>Returns projects where the current user is the only admin (blocks account deletion).</summary>
+    [HttpGet("me/admin-only-projects")]
+    public async Task<IActionResult> GetAdminOnlyProjects()
+    {
+        var result = await _userService.GetAdminOnlyProjectsAsync(GetUserId());
+        return Ok(result);
+    }
+
     /// <summary>Soft-delete the current user's account and notify project admins.</summary>
     [HttpDelete("me")]
     public async Task<IActionResult> DeleteAccount()
