@@ -14,6 +14,7 @@ public class ProjectsController : BaseController
 {
     private readonly IProjectService _projectService;
     private readonly IProjectInvitationService _invitationService;
+    private readonly IProjectHistoryService _historyService;
     private readonly ITaskService _taskService;
     private readonly IStatsService _statsService;
     private readonly FileStorageHelper _fileStorage;
@@ -23,6 +24,7 @@ public class ProjectsController : BaseController
     public ProjectsController(
         IProjectService projectService,
         IProjectInvitationService invitationService,
+        IProjectHistoryService historyService,
         ITaskService taskService,
         IStatsService statsService,
         FileStorageHelper fileStorage,
@@ -31,6 +33,7 @@ public class ProjectsController : BaseController
     {
         _projectService = projectService;
         _invitationService = invitationService;
+        _historyService = historyService;
         _taskService = taskService;
         _statsService = statsService;
         _fileStorage = fileStorage;
@@ -66,6 +69,15 @@ public class ProjectsController : BaseController
     {
         var result = await _projectService.UpdateProjectAsync(id, request, GetUserId());
         return Ok(result);
+    }
+
+    [HttpPost("{id:guid}/image")]
+    [RequestSizeLimit(5 * 1024 * 1024)]
+    public async Task<IActionResult> UploadProjectImage(Guid id, IFormFile file)
+    {
+        var webRootPath = _env.WebRootPath ?? Path.Combine(Directory.GetCurrentDirectory(), "wwwroot");
+        var url = await _projectService.UploadProjectImageAsync(id, file, GetUserId(), webRootPath);
+        return Ok(new { imageUrl = url });
     }
 
     [HttpDelete("{id:guid}")]
@@ -106,11 +118,25 @@ public class ProjectsController : BaseController
     }
 
     [HttpPost("{id:guid}/invite-link")]
-    public async Task<IActionResult> GenerateInviteLink(Guid id)
+    public async Task<IActionResult> GenerateInviteLink(Guid id, [FromBody] GenerateInviteLinkRequest? request = null)
     {
         var frontendBase = _config["Frontend:BaseUrl"] ?? "http://localhost:5173";
-        var result = await _invitationService.GenerateInviteLinkAsync(id, GetUserId(), frontendBase);
+        var result = await _invitationService.GenerateInviteLinkAsync(id, GetUserId(), frontendBase, request);
         return Ok(result);
+    }
+
+    [HttpGet("{id:guid}/invite-links")]
+    public async Task<IActionResult> GetInviteLinks(Guid id)
+    {
+        var result = await _invitationService.GetLinkInvitationsAsync(id, GetUserId());
+        return Ok(result);
+    }
+
+    [HttpDelete("{id:guid}/invite-links/{invitationId:guid}")]
+    public async Task<IActionResult> DeleteInviteLink(Guid id, Guid invitationId)
+    {
+        await _invitationService.DeleteInviteLinkAsync(id, invitationId, GetUserId());
+        return NoContent();
     }
 
     [HttpDelete("{id:guid}/members/{userId:guid}")]
@@ -127,12 +153,20 @@ public class ProjectsController : BaseController
         return Ok(new { message = "Role updated successfully." });
     }
 
-    /// <summary>Assign a developer to a manager's group (Admin only).</summary>
     [HttpPatch("{id:guid}/members/{userId:guid}/manager")]
     public async Task<IActionResult> AssignManager(Guid id, Guid userId, [FromBody] AssignManagerRequest request)
     {
         await _projectService.AssignDeveloperToManagerAsync(id, userId, request, GetUserId());
         return Ok(new { message = "Group assignment updated." });
+    }
+
+    // ─── History ─────────────────────────────────────────────────────────────
+
+    [HttpGet("{id:guid}/history")]
+    public async Task<IActionResult> GetHistory(Guid id)
+    {
+        var result = await _historyService.GetHistoryAsync(id, GetUserId());
+        return Ok(result);
     }
 
     // ─── Task Management ─────────────────────────────────────────────────────
@@ -183,7 +217,6 @@ public class ProjectsController : BaseController
         return Ok(result);
     }
 
-    /// <summary>Manager delegates their InProgress task to a developer in their group.</summary>
     [HttpPost("{projectId:guid}/tasks/{id:guid}/delegate")]
     public async Task<IActionResult> DelegateTask(Guid projectId, Guid id, [FromBody] DelegateTaskRequest request)
     {
