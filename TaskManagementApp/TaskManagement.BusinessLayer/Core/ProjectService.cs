@@ -306,7 +306,8 @@ public class ProjectService : IProjectService
 
         if (!string.IsNullOrEmpty(project.ImageUrl))
         {
-            var oldPath = Path.Combine(webRootPath, project.ImageUrl.TrimStart('/'));
+            var cleanOld = project.ImageUrl.Split('?')[0].TrimStart('/');
+            var oldPath = Path.Combine(webRootPath, cleanOld);
             if (File.Exists(oldPath)) File.Delete(oldPath);
         }
 
@@ -318,7 +319,8 @@ public class ProjectService : IProjectService
         await using var stream = new FileStream(fullPath, FileMode.Create);
         await file.CopyToAsync(stream);
 
-        var url = $"/uploads/projects/{fileName}";
+        var v = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var url = $"/uploads/projects/{fileName}?v={v}";
         project.ImageUrl = url;
         _db.GetRepo<Project>().Update(project);
         await _db.SaveAsync();

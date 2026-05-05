@@ -110,10 +110,11 @@ public class UserService : IUserService
         var avatarDir = Path.Combine(webRootPath, "uploads", "avatars");
         Directory.CreateDirectory(avatarDir);
 
-        // Delete old avatar file if it exists
+        // Delete old avatar file if it exists (strip query string before building path)
         if (!string.IsNullOrEmpty(user.AvatarUrl))
         {
-            var oldPath = Path.Combine(webRootPath, user.AvatarUrl.TrimStart('/'));
+            var cleanOld = user.AvatarUrl.Split('?')[0].TrimStart('/');
+            var oldPath = Path.Combine(webRootPath, cleanOld);
             if (File.Exists(oldPath)) File.Delete(oldPath);
         }
 
@@ -123,7 +124,8 @@ public class UserService : IUserService
         await using var stream = new FileStream(fullPath, FileMode.Create);
         await file.CopyToAsync(stream);
 
-        var url = $"/uploads/avatars/{fileName}";
+        var v = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+        var url = $"/uploads/avatars/{fileName}?v={v}";
         user.AvatarUrl = url;
         _db.GetRepo<User>().Update(user);
         await _db.SaveAsync();
